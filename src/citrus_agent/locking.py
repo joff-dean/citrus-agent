@@ -15,10 +15,6 @@ class InstanceLock:
     def __enter__(self):
         self.file = self.path.open("a+b")
         self.file.seek(0)
-        if not self.file.read(1):
-            self.file.write(b"0")
-            self.file.flush()
-        self.file.seek(0)
         try:
             if os.name == "nt":
                 import msvcrt
@@ -28,6 +24,11 @@ class InstanceLock:
                 import fcntl
 
                 fcntl.flock(self.file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # Windows byte-range locks also prohibit reads through another handle.
+            # Acquire first, then initialize; locking past EOF is supported.
+            if os.fstat(self.file.fileno()).st_size == 0:
+                self.file.write(b"0")
+                self.file.flush()
         except OSError:
             self.file.close()
             raise ValueError(

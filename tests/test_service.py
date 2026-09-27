@@ -1,11 +1,11 @@
 import xml.etree.ElementTree as ET
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from citrus_agent.service import linux_unit, windows_task
 
 
 def test_systemd_paths_with_spaces_and_specifiers():
-    unit = linux_unit(Path("/home/a b/100%/$data"), "/a b/python")
+    unit = linux_unit(PurePosixPath("/home/a b/100%/$data"), "/a b/python")
     assert '"/a b/python"' in unit
     assert "100%%/$$data" in unit
     assert "KillMode=control-group" in unit
