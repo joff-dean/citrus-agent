@@ -23,3 +23,16 @@ jobs:
       - run: python -m ruff check .
       - run: python -m pytest -q
       - run: python -m build
+      - name: Install on Ubuntu
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          CITRUS_INSTALL_DIR="$RUNNER_TEMP/citrus-client" bash scripts/install-linux.sh
+          "$RUNNER_TEMP/citrus-client/bin/citrus-agent" --help
+      - name: Install on Windows PowerShell
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          .\scripts\install-windows.ps1 -Python (Get-Command python).Source -InstallDir "$env:RUNNER_TEMP\citrus-client"
+          & "$env:RUNNER_TEMP\citrus-client\Scripts\citrus-agent.exe" --help
+          if ($LASTEXITCODE -ne 0) { throw "Installed CLI failed" }

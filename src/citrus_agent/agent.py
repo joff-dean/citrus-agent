@@ -126,6 +126,25 @@ class Agent:
             return
         self.lease_deadline = time.monotonic() + job["lease_seconds"]
         self.active = ctx
+        try:
+            # A replayed claim receipt may contain an expired lease. Confirm ownership
+            # immediately before launching a CLI, never rely on its old relative TTL.
+            await self.heartbeat_once()
+        except Exception:
+            self.state.finish(
+                job["id"],
+                "interrupted",
+                {
+                    "reason": "lease_confirmation_failed",
+                    "retry_safe": False,
+                },
+            )
+            self.active = None
+            raise
+        if ctx.cancelled.is_set() or self.stopping.is_set():
+            self.state.finish(job["id"], "cancelled", {"reason": ctx.cancel_reason})
+            self.active = None
+            return
         self.active_task = asyncio.create_task(self.execute(ctx))
 
     async def heartbeat_once(self):

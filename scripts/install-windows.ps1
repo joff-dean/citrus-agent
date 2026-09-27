@@ -1,7 +1,7 @@
 param([string]$Python = "python", [string]$InstallDir = "$env:LOCALAPPDATA\CitrusAgent\venv")
 $ErrorActionPreference = "Stop"
 $repoDir = Split-Path -Parent $PSScriptRoot
-& $Python -c 'import sys; assert sys.version_info >= (3, 11), "Python 3.11+ required"'
+& $Python -c "import sys; sys.exit(sys.version_info < (3, 11))"
 if ($LASTEXITCODE -ne 0) { throw "Python 3.11 or newer is required" }
 & $Python -m venv $InstallDir
 if ($LASTEXITCODE -ne 0) { throw "Virtual environment creation failed" }
