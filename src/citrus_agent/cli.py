@@ -21,7 +21,7 @@ from .config import Config, Project, data_dir, private_dir, validate_hub, valida
 from .locking import InstanceLock
 from .secrets import CredentialStore
 from .service import manage_service
-from .state import State
+from .state import State, enrollment_state_dir
 from .transport import HubClient, HubError
 from .windows_job import protect_process_tree
 
@@ -193,7 +193,8 @@ def dispatch(args):
     if args.command == "doctor":
         return doctor(home, config)
     if args.command == "status":
-        state = State(home)
+        credentials = credentials_for(home, config)
+        state = State(enrollment_state_dir(home, config.hub_url, credentials))
         try:
             print(
                 json.dumps(
@@ -262,6 +263,11 @@ def dispatch(args):
 
 
 def main():
+    # Windows pipes can default to cp1252 even when the interactive console supports
+    # Unicode. The command-line interface and redirected output use UTF-8 consistently.
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     try:
         code = dispatch(parser().parse_args())
     except KeyboardInterrupt:

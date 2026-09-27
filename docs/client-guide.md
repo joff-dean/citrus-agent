@@ -145,11 +145,15 @@ CLI를 다른 위치에 재설치하면 서비스를 중지하고 runtime set �
 
 - config.json: Hub, 프로젝트, CLI 경로, timeout 등의 설정
 - credentials.json: Hub 장치 토큰 (Ubuntu 0600, Windows DPAPI)
-- state.sqlite3: 작업 ID, 세션 연결, 전송 대기 이벤트
+- enrollments/<등록범위 해시>/state.sqlite3: 작업 ID, 세션 연결, 전송 대기 이벤트
 - agent.log: 회전 로그(2 MiB × 최대 4파일), 원본 프롬프트·토큰·모델 stderr 제외
 
 설정 변경은 `service stop` 후 수행합니다. `status`는 로컬 기록 조회이며 프로세스 생존 여부는
 `service status` 또는 Hub의 마지막 heartbeat를 확인하세요.
+
+작업·세션·outbox는 Hub URL, 장치 ID, 소유자별로 분리됩니다. 다른 Hub나 새 등록으로 전환해도
+이전 등록의 대화·전송 대기 메시지가 새 서버로 전달되지 않습니다. `status`는 현재 등록의 기록만
+표시합니다. 등록 해제 후에는 보존된 DB를 별도로 관리합니다.
 
 ```text
 citrus-agent project list

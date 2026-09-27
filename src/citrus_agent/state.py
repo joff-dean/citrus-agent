@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sqlite3
@@ -8,6 +9,12 @@ import uuid
 from pathlib import Path
 
 from .config import private_dir
+
+
+def enrollment_state_dir(home: Path, hub_url: str, credentials: dict) -> Path:
+    identity = json.dumps([hub_url, credentials["agent_id"], credentials["owner_id"]])
+    scope = hashlib.sha256(identity.encode()).hexdigest()[:32]
+    return home / "enrollments" / scope
 
 
 def sanitize(value, secrets: tuple[str, ...] = ()):

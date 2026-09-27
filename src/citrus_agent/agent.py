@@ -11,7 +11,7 @@ from pathlib import Path
 from . import __version__
 from .config import Config, validate_id
 from .runtime import JobContext, make_runtime
-from .state import State
+from .state import State, enrollment_state_dir
 from .transport import HubClient, HubError
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,9 @@ class Agent:
         self.config = config
         self.credentials = credentials
         self.hub = hub or HubClient(config.hub_url, credentials["token"], config.ca_file)
-        self.state = State(home, (credentials["token"],))
+        self.state = State(
+            enrollment_state_dir(home, config.hub_url, credentials), (credentials["token"],)
+        )
         self.prefix = f"/v1/agents/{validate_id(credentials['agent_id'])}"
         self.runtime_factory = runtime_factory
         self.active: JobContext | None = None

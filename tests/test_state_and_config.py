@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -6,7 +8,7 @@ from citrus_agent.cli import dispatch, parser
 from citrus_agent.config import Config, Project, validate_hub, validate_id
 from citrus_agent.locking import InstanceLock
 from citrus_agent.secrets import CredentialStore
-from citrus_agent.state import sanitize
+from citrus_agent.state import State, enrollment_state_dir, sanitize
 
 
 @pytest.mark.parametrize(
@@ -131,3 +133,38 @@ def test_unknown_policy_is_not_loaded_as_valid(tmp_path):
     project = Project(str(tmp_path), policy="root")
     with pytest.raises(ValueError):
         project.validate()
+
+
+def test_reenrollment_cannot_leak_sessions_or_pending_events(tmp_path, credentials):
+    original = enrollment_state_dir(tmp_path, "https://hub1.test", credentials)
+    first = State(original)
+    first.emit("J1", "message", {"text": "private original result"})
+    first.save_session("S1", "user-1", "demo", "codex", "original-session")
+    first.close()
+    for hub, identity in [
+        ("https://hub2.test", credentials),
+        ("https://hub1.test", {**credentials, "agent_id": "A2"}),
+        ("https://hub1.test", {**credentials, "owner_id": "user-2"}),
+    ]:
+        path = enrollment_state_dir(tmp_path, hub, identity)
+        assert path != original
+        second = State(path)
+        try:
+            assert not second.pending()
+            assert second.session("S1", "user-1", "demo", "codex") is None
+        finally:
+            second.close()
+    assert (
+        enrollment_state_dir(tmp_path, "https://hub1.test", {**credentials, "token": "new"})
+        == original
+    )
+
+
+def test_korean_help_works_when_windows_pipe_encoding_is_legacy():
+    result = subprocess.run(
+        [sys.executable, "-m", "citrus_agent", "--help"],
+        env={**os.environ, "PYTHONIOENCODING": "cp1252"},
+        capture_output=True,
+        check=True,
+    )
+    assert "사내 메신저" in result.stdout.decode("utf-8")
